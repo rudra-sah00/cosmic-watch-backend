@@ -57,7 +57,7 @@ describe('redis.config', () => {
     getRedis();
 
     const Redis = (await import('ioredis')).default;
-    const options = vi.mocked(Redis).mock.calls[0][1] as any;
+    const options = (vi.mocked(Redis).mock.calls[0] as unknown[])[1] as any;
 
     expect(options.retryStrategy(1)).toBe(200);
     expect(options.retryStrategy(10)).toBe(2000);
