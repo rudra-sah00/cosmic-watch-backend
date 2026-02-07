@@ -1,6 +1,7 @@
 import http from 'node:http';
 import { createApp } from './app';
 import { connectDatabase, connectRedis, disconnectDatabase, disconnectRedis, env } from './config';
+import { startAlertScheduler, stopAlertScheduler } from './modules/alerts/alerts.scheduler';
 import { NeoService } from './modules/neo/neo.service';
 import { logger } from './utils';
 import { disconnectRiskEngineSocket, initializeSocket } from './websocket';
@@ -33,6 +34,9 @@ async function bootstrap(): Promise<void> {
       },
       '🌌 Cosmic Watch API Server started'
     );
+
+    // Start the close-approach alert scheduler (cron every 6h)
+    startAlertScheduler();
   });
 
   /** Handles graceful shutdown on process signals. */
@@ -40,6 +44,7 @@ async function bootstrap(): Promise<void> {
     logger.info({ signal }, 'Received shutdown signal — starting graceful shutdown');
 
     server.close(async () => {
+      stopAlertScheduler();
       disconnectRiskEngineSocket();
       await disconnectRedis();
       await disconnectDatabase();
