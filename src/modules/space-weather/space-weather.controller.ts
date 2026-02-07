@@ -2,11 +2,9 @@ import type { NextFunction, Request, Response } from 'express';
 import { ApiResponseHelper } from '../../utils';
 import { SpaceWeatherService } from './space-weather.service';
 
+/** Handles HTTP requests for DONKI space-weather event data. */
 export const SpaceWeatherController = {
-  /**
-   * GET /api/v1/space-weather/cme
-   * Query: start_date, end_date
-   */
+  /** GET /api/v1/space-weather/cme — coronal mass ejection events. */
   async getCme(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { start_date, end_date } = req.query as Record<string, string>;
@@ -17,10 +15,7 @@ export const SpaceWeatherController = {
     }
   },
 
-  /**
-   * GET /api/v1/space-weather/flares
-   * Query: start_date, end_date
-   */
+  /** GET /api/v1/space-weather/flares — solar flare events. */
   async getSolarFlares(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { start_date, end_date } = req.query as Record<string, string>;
@@ -31,10 +26,7 @@ export const SpaceWeatherController = {
     }
   },
 
-  /**
-   * GET /api/v1/space-weather/storms
-   * Query: start_date, end_date
-   */
+  /** GET /api/v1/space-weather/storms — geomagnetic storm events. */
   async getGeomagneticStorms(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { start_date, end_date } = req.query as Record<string, string>;
@@ -45,10 +37,7 @@ export const SpaceWeatherController = {
     }
   },
 
-  /**
-   * GET /api/v1/space-weather/notifications
-   * Query: start_date, end_date, type
-   */
+  /** GET /api/v1/space-weather/notifications — space-weather notification messages. */
   async getNotifications(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { start_date, end_date, type } = req.query as Record<string, string>;

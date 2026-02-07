@@ -7,9 +7,7 @@ import type { UserPayload, UserRole } from './auth.types';
 
 const SALT_ROUNDS = 12;
 
-/**
- * Generate JWT token pair
- */
+/** Generate a signed JWT access + refresh token pair. */
 function generateTokens(payload: UserPayload) {
   const accessToken = jwt.sign(payload, env.jwt.secret, {
     expiresIn: env.jwt.expiresIn as jwt.SignOptions['expiresIn'],
@@ -22,10 +20,9 @@ function generateTokens(payload: UserPayload) {
   return { accessToken, refreshToken };
 }
 
+/** Authentication service — register, login, profile and token refresh. */
 export const AuthService = {
-  /**
-   * Register a new user
-   */
+  /** Create a new user account with hashed password and return JWT tokens. */
   async register(input: RegisterInput) {
     const existingUser = await prisma.user.findUnique({
       where: { email: input.email },
@@ -62,9 +59,7 @@ export const AuthService = {
     return { user, ...tokens };
   },
 
-  /**
-   * Login user
-   */
+  /** Verify credentials, update last-login timestamp and return JWT tokens. */
   async login(input: LoginInput) {
     const user = await prisma.user.findUnique({
       where: { email: input.email },
@@ -103,9 +98,7 @@ export const AuthService = {
     };
   },
 
-  /**
-   * Get user profile
-   */
+  /** Fetch user profile including watchlist/alert counts. */
   async getProfile(userId: string) {
     const user = await prisma.user.findUnique({
       where: { id: userId },
@@ -134,9 +127,7 @@ export const AuthService = {
     return user;
   },
 
-  /**
-   * Refresh access token
-   */
+  /** Verify a refresh token and issue new access + refresh tokens. */
   async refreshToken(refreshToken: string) {
     try {
       const decoded = jwt.verify(refreshToken, env.jwt.refreshSecret) as UserPayload;

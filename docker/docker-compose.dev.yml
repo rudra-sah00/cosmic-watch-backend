@@ -28,6 +28,24 @@ services:
     networks:
       - cosmicwatch-network
 
+  # ── Redis Cache ────────────────────────────────────────────────
+  redis:
+    image: redis:8-alpine
+    container_name: cosmicwatch-redis-dev
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data_dev:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    command: ["redis-server", "--maxmemory", "128mb", "--maxmemory-policy", "allkeys-lru", "--save", "60", "1000"]
+    networks:
+      - cosmicwatch-network
+
   # ── Python Risk Analysis Engine ──────────────────────────────
   risk-engine:
     build:
@@ -49,7 +67,7 @@ services:
       timeout: 5s
       start_period: 10s
       retries: 3
-    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+    command: ["uvicorn", "app.main:combined_asgi_app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
     networks:
       - cosmicwatch-network
 
@@ -61,30 +79,23 @@ services:
     container_name: cosmicwatch-backend-dev
     restart: unless-stopped
     ports:
-      - "4000:4000"
+      - "${PORT:-4000}:${PORT:-4000}"
       - "9229:9229"   # Node.js debug port
+    env_file:
+      - ../.env
     environment:
-      NODE_ENV: development
-      PORT: 4000
+      # Only override values that differ inside Docker networking
       DATABASE_URL: postgresql://cosmicwatch:cosmicwatch_secret@db:5432/cosmicwatch_db?schema=public
-      JWT_SECRET: dev-jwt-secret-change-in-production
-      JWT_EXPIRES_IN: 7d
-      JWT_REFRESH_SECRET: dev-refresh-secret-change-in-production
-      JWT_REFRESH_EXPIRES_IN: 30d
-      NASA_API_KEY: ${NASA_API_KEY:-DEMO_KEY}
-      NASA_API_BASE_URL: https://api.nasa.gov/neo/rest/v1
       RISK_ENGINE_URL: http://risk-engine:8000
-      CORS_ORIGIN: http://localhost:3000
-      API_VERSION: v1
-      LOG_LEVEL: debug
-      RATE_LIMIT_WINDOW_MS: 900000
-      RATE_LIMIT_MAX_REQUESTS: 1000
+      REDIS_URL: redis://redis:6379
     volumes:
       - ../src:/app/src              # Hot-reload Node.js source
       - ../prisma:/app/prisma        # Sync schema changes
       - /app/node_modules            # Prevent host overwrite
     depends_on:
       db:
+        condition: service_healthy
+      redis:
         condition: service_healthy
       risk-engine:
         condition: service_healthy
@@ -93,6 +104,8 @@ services:
 
 volumes:
   postgres_data_dev:
+    driver: local
+  redis_data_dev:
     driver: local
 
 networks:

@@ -3,10 +3,9 @@ import { ApiResponseHelper } from '../../utils';
 import { AuthService } from './auth.service';
 import type { AuthenticatedRequest } from './auth.types';
 
+/** Handles HTTP requests for authentication and user management. */
 export const AuthController = {
-  /**
-   * POST /api/v1/auth/register
-   */
+  /** POST /api/v1/auth/register — create a new user account. */
   async register(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const result = await AuthService.register(req.body);
@@ -16,9 +15,7 @@ export const AuthController = {
     }
   },
 
-  /**
-   * POST /api/v1/auth/login
-   */
+  /** POST /api/v1/auth/login — authenticate and return JWT tokens. */
   async login(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const result = await AuthService.login(req.body);
@@ -28,9 +25,7 @@ export const AuthController = {
     }
   },
 
-  /**
-   * GET /api/v1/auth/profile
-   */
+  /** GET /api/v1/auth/profile — retrieve the authenticated user's profile. */
   async getProfile(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const user = await AuthService.getProfile(req.user!.id);
@@ -40,9 +35,7 @@ export const AuthController = {
     }
   },
 
-  /**
-   * POST /api/v1/auth/refresh
-   */
+  /** POST /api/v1/auth/refresh — issue new access/refresh token pair. */
   async refreshToken(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { refreshToken } = req.body;

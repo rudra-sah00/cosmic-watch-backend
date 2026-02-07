@@ -1,6 +1,6 @@
 import { prisma } from '../../config';
 import { ConflictError, NotFoundError } from '../../utils/errors';
-import type { AddWatchlistInput } from './watchlist.schema';
+import type { AddWatchlistInput, UpdateWatchlistInput } from './watchlist.schema';
 
 export const WatchlistService = {
   /**
@@ -80,6 +80,34 @@ export const WatchlistService = {
           asteroidId,
         },
       },
+    });
+  },
+
+  /**
+   * Update watchlist item alert settings
+   */
+  async updateWatchlistItem(userId: string, asteroidId: string, input: UpdateWatchlistInput) {
+    const existing = await prisma.watchlist.findUnique({
+      where: {
+        userId_asteroidId: {
+          userId,
+          asteroidId,
+        },
+      },
+    });
+
+    if (!existing) {
+      throw new NotFoundError('Asteroid not in watchlist');
+    }
+
+    return prisma.watchlist.update({
+      where: {
+        userId_asteroidId: {
+          userId,
+          asteroidId,
+        },
+      },
+      data: input,
     });
   },
 };

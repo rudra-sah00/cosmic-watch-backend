@@ -4,6 +4,7 @@ import type { ZodSchema } from 'zod';
 
 type ValidationTarget = 'body' | 'query' | 'params';
 
+/** Validate a request property against a Zod schema, returning 400 with structured errors on failure. */
 export const validate = (schema: ZodSchema, target: ValidationTarget = 'body') => {
   return (req: Request, res: Response, next: NextFunction): void => {
     const result = schema.safeParse(req[target]);

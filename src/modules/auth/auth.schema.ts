@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-// ── Auth Schemas ──────────────────────────────────────────────
+/** Zod schema for user registration input validation. */
 export const registerSchema = z.object({
   name: z
     .string()
@@ -22,6 +22,6 @@ export const loginSchema = z.object({
   password: z.string().min(1, 'Password is required'),
 });
 
-// ── Type exports ──────────────────────────────────────────────
+/** Inferred type from {@link registerSchema}. */
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;

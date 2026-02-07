@@ -1,25 +1,28 @@
 import http from 'node:http';
 import { createApp } from './app';
-import { connectDatabase, disconnectDatabase, env } from './config';
+import { connectDatabase, connectRedis, disconnectDatabase, disconnectRedis, env } from './config';
 import { NeoService } from './modules/neo/neo.service';
 import { logger } from './utils';
-import { initializeSocket } from './websocket';
+import { disconnectRiskEngineSocket, initializeSocket } from './websocket';
 
 async function bootstrap(): Promise<void> {
-  // ── Create Express App ────────────────────────────────────────
+  // Create Express app
   const app = createApp();
   const server = http.createServer(app);
 
-  // ── Initialize Socket.io ──────────────────────────────────────
+  // Initialize Socket.io
   initializeSocket(server);
 
-  // ── Connect to Database ───────────────────────────────────────
+  // Connect to database
   await connectDatabase();
 
-  // ── Connect to Python Risk Engine ─────────────────────────────
+  // Connect to Redis cache
+  await connectRedis();
+
+  // Connect to Python risk engine
   await NeoService.connectRiskEngine();
 
-  // ── Start Server ──────────────────────────────────────────────
+  // Start HTTP server
   server.listen(env.port, () => {
     logger.info(
       {
@@ -32,11 +35,13 @@ async function bootstrap(): Promise<void> {
     );
   });
 
-  // ── Graceful Shutdown ─────────────────────────────────────────
+  /** Handles graceful shutdown on process signals. */
   const shutdown = async (signal: string) => {
     logger.info({ signal }, 'Received shutdown signal — starting graceful shutdown');
 
     server.close(async () => {
+      disconnectRiskEngineSocket();
+      await disconnectRedis();
       await disconnectDatabase();
       logger.info('Server shut down gracefully');
       process.exit(0);
@@ -52,7 +57,7 @@ async function bootstrap(): Promise<void> {
   process.on('SIGTERM', () => shutdown('SIGTERM'));
   process.on('SIGINT', () => shutdown('SIGINT'));
 
-  // ── Unhandled Errors ──────────────────────────────────────────
+  // Log unhandled errors before exit
   process.on('unhandledRejection', (reason: Error) => {
     logger.error({ err: reason }, 'Unhandled Rejection');
   });

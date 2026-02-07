@@ -1,4 +1,4 @@
-// ── API Response Types ────────────────────────────────────────
+/** Standard API response envelope. */
 export interface ApiResponse<T = unknown> {
   success: boolean;
   message: string;
@@ -14,7 +14,7 @@ export interface PaginationMeta {
   totalPages: number;
 }
 
-// ── NASA NEO Types ────────────────────────────────────────────
+/** NASA NEO feed response from the NeoWs API. */
 export interface NeoFeedResponse {
   links?: {
     next?: string;
@@ -104,7 +104,7 @@ export interface CloseApproachData {
   orbiting_body: string;
 }
 
-// ── Risk Analysis Types ───────────────────────────────────────
+/** Severity level for asteroid risk assessments. */
 export enum RiskLevel {
   LOW = 'LOW',
   MEDIUM = 'MEDIUM',
@@ -184,7 +184,7 @@ export interface EnhancedRiskResult {
   assessments: RiskAssessment[];
 }
 
-// ── NEO Query Schemas ─────────────────────────────────────────
+/** Zod validation schemas for NEO query parameters. */
 import { z } from 'zod';
 
 export const neoFeedSchema = z.object({

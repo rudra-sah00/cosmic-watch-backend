@@ -1,6 +1,6 @@
 import axios from 'axios';
-import { env } from '../../config';
-import { neoLogger } from '../../utils';
+import { CachePrefix, CacheTTL, env } from '../../config';
+import { cacheKey, getOrSet, neoLogger } from '../../utils';
 import type {
   CadRawResponse,
   CloseApproach,
@@ -26,7 +26,7 @@ const AU_TO_LUNAR = 389.17;
 
 const cneosLogger = neoLogger.child({ submodule: 'cneos' });
 
-// ── Parsers ─────────────────────────────────────────────────
+/** Parse raw SBDB close-approach tabular data into typed objects. */
 function parseCadData(raw: CadRawResponse): CloseApproach[] {
   if (!raw.data || raw.count === 0) return [];
 
@@ -57,6 +57,7 @@ function parseCadData(raw: CadRawResponse): CloseApproach[] {
   });
 }
 
+/** Parse raw fireball tabular data into typed objects. */
 function parseFireballData(raw: FireballRawResponse): Fireball[] {
   if (!raw.data || raw.count === 0) return [];
 
@@ -90,8 +91,9 @@ function parseFireballData(raw: FireballRawResponse): Fireball[] {
   });
 }
 
+/** CNEOS / SSD service — close-approach, Sentry impact monitoring and fireball data. */
 export const CneosService = {
-  // ── Close Approach Data ───────────────────────────────────────
+  /** Query SBDB close-approach data with date/distance filters. */
   async getCloseApproaches(
     options: {
       dateMin?: string;
@@ -105,7 +107,19 @@ export const CneosService = {
       fullname?: boolean;
     } = {}
   ): Promise<CloseApproachResponse> {
-    try {
+    // Normalize defaults into the key so equivalent queries share one cache entry
+    const normalized = {
+      dateMin: options.dateMin || 'now',
+      dateMax: options.dateMax || '+60',
+      distMax: options.distMax || '10LD',
+      sort: options.sort || 'dist',
+      limit: options.limit,
+      neo: options.neo !== false,
+      pha: options.pha || false,
+    };
+    const key = cacheKey(CachePrefix.CNEOS_CAD, normalized);
+
+    return getOrSet(key, CacheTTL.CNEOS_CAD, async () => {
       const { data } = await SSD_CLIENT.get<CadRawResponse>('/cad.api', {
         params: {
           'date-min': options.dateMin || 'now',
@@ -132,17 +146,16 @@ export const CneosService = {
         },
         approaches,
       };
-    } catch (error) {
-      cneosLogger.error({ err: error }, 'CNEOS CAD API request failed');
-      throw error;
-    }
+    });
   },
 
-  // ── Sentry Impact Monitoring List ─────────────────────────────
+  /** List objects in CNEOS Sentry impact monitoring with optional filters. */
   async getSentryList(
     options: { psMin?: number; ipMin?: number; hMax?: number; days?: number } = {}
   ): Promise<SentryListResponse> {
-    try {
+    const key = cacheKey(CachePrefix.CNEOS_SENTRY, options);
+
+    return getOrSet(key, CacheTTL.CNEOS_SENTRY_LIST, async () => {
       const params: Record<string, unknown> = {};
       if (options.psMin !== undefined) params['ps-min'] = options.psMin;
       if (options.ipMin !== undefined) params['ip-min'] = options.ipMin;
@@ -169,15 +182,14 @@ export const CneosService = {
       cneosLogger.info({ count: data.count }, 'Sentry list retrieved');
 
       return { totalCount: data.count, objects };
-    } catch (error) {
-      cneosLogger.error({ err: error }, 'CNEOS Sentry API request failed');
-      throw error;
-    }
+    });
   },
 
-  // ── Sentry Object Details ─────────────────────────────────────
+  /** Fetch detailed Sentry data for a specific object by designation. */
   async getSentryDetail(designation: string): Promise<SentryDetailResponse> {
-    try {
+    const key = cacheKey(CachePrefix.CNEOS_SENTRY_DETAIL, designation);
+
+    return getOrSet(key, CacheTTL.CNEOS_SENTRY_DETAIL, async () => {
       const { data } = await SSD_CLIENT.get<SentryRawDetailResponse>('/sentry.api', {
         params: { des: designation },
       });
@@ -224,13 +236,10 @@ export const CneosService = {
       );
 
       return detail;
-    } catch (error) {
-      cneosLogger.error({ err: error, designation }, 'CNEOS Sentry detail request failed');
-      throw error;
-    }
+    });
   },
 
-  // ── Fireball / Bolide Data ────────────────────────────────────
+  /** Query recorded fireball / bolide events from the SSD API. */
   async getFireballs(
     options: {
       dateMin?: string;
@@ -241,7 +250,18 @@ export const CneosService = {
       reqLoc?: boolean;
     } = {}
   ): Promise<FireballResponse> {
-    try {
+    // Normalize defaults so equivalent queries share one cache entry
+    const normalized = {
+      dateMin: options.dateMin,
+      dateMax: options.dateMax,
+      sort: options.sort || '-date',
+      limit: options.limit || 20,
+      energyMin: options.energyMin,
+      reqLoc: options.reqLoc || false,
+    };
+    const key = cacheKey(CachePrefix.CNEOS_FIREBALL, normalized);
+
+    return getOrSet(key, CacheTTL.CNEOS_FIREBALL, async () => {
       const params: Record<string, unknown> = {
         sort: options.sort || '-date',
         limit: options.limit || 20,
@@ -258,9 +278,6 @@ export const CneosService = {
       cneosLogger.info({ count: data.count }, 'Fireball data retrieved');
 
       return { totalCount: data.count, fireballs };
-    } catch (error) {
-      cneosLogger.error({ err: error }, 'CNEOS Fireball API request failed');
-      throw error;
-    }
+    });
   },
 };

@@ -1,6 +1,6 @@
 import type { Request } from 'express';
 
-// ── Authenticated Request ─────────────────────────────────────
+/** Express request extended with authenticated user payload. */
 export interface AuthenticatedRequest extends Request {
   user?: {
     id: string;
@@ -9,7 +9,7 @@ export interface AuthenticatedRequest extends Request {
   };
 }
 
-// ── User Types ────────────────────────────────────────────────
+/** Available user roles in the system. */
 export enum UserRole {
   USER = 'USER',
   RESEARCHER = 'RESEARCHER',

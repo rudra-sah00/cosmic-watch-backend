@@ -1,8 +1,9 @@
-// ═══════════════════════════════════════════════════════════════
-//  SSD/CNEOS API Types — Close Approach, Sentry, Fireball
-// ═══════════════════════════════════════════════════════════════
+/**
+ * SSD/CNEOS API types for Close Approach, Sentry, and Fireball data.
+ * @module cneos/types
+ */
 
-// ── Close Approach Data (CAD) ─────────────────────────────────
+/** Raw response from the CNEOS Close Approach Data (CAD) API. */
 export interface CadRawResponse {
   signature: { version: string; source: string };
   count: number;
@@ -35,7 +36,7 @@ export interface CloseApproachResponse {
   approaches: CloseApproach[];
 }
 
-// ── Sentry Impact Monitoring ──────────────────────────────────
+/** Raw response from the Sentry impact monitoring API. */
 export interface SentryRawSummaryResponse {
   signature: { version: string; source: string };
   count: number;
@@ -153,7 +154,7 @@ export interface SentryDetailResponse {
   }[];
 }
 
-// ── Fireball / Bolide Data ────────────────────────────────────
+/** Raw response from the CNEOS fireball / bolide API. */
 export interface FireballRawResponse {
   signature: { version: string; source: string };
   count: number;

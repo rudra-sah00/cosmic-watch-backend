@@ -39,5 +39,5 @@ EXPOSE 4000 9229
 HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
   CMD curl -f http://localhost:4000/api/v1/health || exit 1
 
-# Start with hot-reload
-CMD ["pnpm", "dev"]
+# Run migrations then start with hot-reload
+CMD ["sh", "-c", "pnpm exec prisma db push && pnpm dev"]

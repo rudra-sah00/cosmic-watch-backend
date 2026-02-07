@@ -1,3 +1,4 @@
+export { cacheKey, getOrSet, invalidateCache } from './cache';
 export {
   AppError,
   BadRequestError,

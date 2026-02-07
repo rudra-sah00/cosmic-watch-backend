@@ -1,6 +1,6 @@
 import axios from 'axios';
-import { env } from '../../config';
-import { neoLogger } from '../../utils';
+import { CachePrefix, CacheTTL, env } from '../../config';
+import { cacheKey, getOrSet, neoLogger } from '../../utils';
 import type { EpicImage, EpicImageRaw, EpicResponse } from './epic.types';
 
 const EPIC_CLIENT = axios.create({
@@ -10,6 +10,7 @@ const EPIC_CLIENT = axios.create({
 
 const epicLogger = neoLogger.child({ submodule: 'epic' });
 
+/** Transform a raw EPIC image record into a typed domain object. */
 function transformImage(raw: EpicImageRaw, type: 'natural' | 'enhanced'): EpicImage {
   // Construct image URL: https://epic.gsfc.nasa.gov/archive/{type}/{year}/{month}/{day}/png/{image}.png
   const dateStr = raw.date.split(' ')[0]; // "2024-01-15"
@@ -34,12 +35,14 @@ function transformImage(raw: EpicImageRaw, type: 'natural' | 'enhanced'): EpicIm
   };
 }
 
+/** EPIC service — Earth imagery from the DSCOVR satellite. */
 export const EpicService = {
-  /**
-   * Get latest natural color Earth images
-   */
+  /** Fetch latest or date-specific natural-color Earth images (30 m TTL). */
   async getNatural(date?: string): Promise<EpicResponse> {
-    try {
+    const resolvedDate = date || `latest:${new Date().toISOString().split('T')[0]}`;
+    const key = cacheKey(CachePrefix.EPIC, { type: 'natural', date: resolvedDate });
+
+    return getOrSet(key, CacheTTL.EPIC_IMAGES, async () => {
       const endpoint = date ? `/api/natural/date/${date}` : '/api/natural';
       const { data } = await EPIC_CLIENT.get<EpicImageRaw[]>(endpoint);
 
@@ -48,17 +51,15 @@ export const EpicService = {
       epicLogger.info({ count: images.length }, 'EPIC natural images retrieved');
 
       return { totalCount: images.length, imageType: 'natural', images };
-    } catch (error) {
-      epicLogger.error({ err: error }, 'EPIC natural image request failed');
-      throw error;
-    }
+    });
   },
 
-  /**
-   * Get latest enhanced color Earth images
-   */
+  /** Fetch latest or date-specific enhanced-color Earth images (30 m TTL). */
   async getEnhanced(date?: string): Promise<EpicResponse> {
-    try {
+    const resolvedDate = date || `latest:${new Date().toISOString().split('T')[0]}`;
+    const key = cacheKey(CachePrefix.EPIC, { type: 'enhanced', date: resolvedDate });
+
+    return getOrSet(key, CacheTTL.EPIC_IMAGES, async () => {
       const endpoint = date ? `/api/enhanced/date/${date}` : '/api/enhanced';
       const { data } = await EPIC_CLIENT.get<EpicImageRaw[]>(endpoint);
 
@@ -67,22 +68,16 @@ export const EpicService = {
       epicLogger.info({ count: images.length }, 'EPIC enhanced images retrieved');
 
       return { totalCount: images.length, imageType: 'enhanced', images };
-    } catch (error) {
-      epicLogger.error({ err: error }, 'EPIC enhanced image request failed');
-      throw error;
-    }
+    });
   },
 
-  /**
-   * Get available dates for natural or enhanced images
-   */
+  /** List available image dates for a given type (6 h TTL). */
   async getAvailableDates(type: 'natural' | 'enhanced' = 'natural'): Promise<string[]> {
-    try {
+    const key = cacheKey(CachePrefix.EPIC_DATES, type);
+
+    return getOrSet(key, CacheTTL.EPIC_DATES, async () => {
       const { data } = await EPIC_CLIENT.get<{ date: string }[]>(`/api/${type}/available`);
       return data.map((d) => d.date);
-    } catch (error) {
-      epicLogger.error({ err: error }, 'EPIC available dates request failed');
-      throw error;
-    }
+    });
   },
 };

@@ -3,10 +3,9 @@ import { ApiResponseHelper } from '../../utils';
 import type { AuthenticatedRequest } from '../auth/auth.types';
 import { AlertService } from './alerts.service';
 
+/** Handles HTTP requests for user alert management. */
 export const AlertController = {
-  /**
-   * GET /api/v1/alerts
-   */
+  /** GET /api/v1/alerts — paginated list with optional unread filter. */
   async getAlerts(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const page = parseInt(req.query.page as string, 10) || 1;
@@ -20,9 +19,7 @@ export const AlertController = {
     }
   },
 
-  /**
-   * PATCH /api/v1/alerts/:alertId/read
-   */
+  /** PATCH /api/v1/alerts/:alertId/read — mark a single alert as read. */
   async markAsRead(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       await AlertService.markAsRead(req.params.alertId as string, req.user!.id);
@@ -32,9 +29,7 @@ export const AlertController = {
     }
   },
 
-  /**
-   * PATCH /api/v1/alerts/read-all
-   */
+  /** PATCH /api/v1/alerts/read-all — bulk mark every alert as read. */
   async markAllAsRead(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       await AlertService.markAllAsRead(req.user!.id);
@@ -44,9 +39,7 @@ export const AlertController = {
     }
   },
 
-  /**
-   * GET /api/v1/alerts/unread-count
-   */
+  /** GET /api/v1/alerts/unread-count — return the number of unread alerts. */
   async getUnreadCount(
     req: AuthenticatedRequest,
     res: Response,

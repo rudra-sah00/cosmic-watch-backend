@@ -5,6 +5,13 @@ npx tsc --noEmit || {
     exit 1
 }
 
+# Run TSDoc validation via TypeDoc
+echo "📝 Checking TSDoc comments..."
+npx typedoc 2>/dev/null || {
+    echo "❌ TSDoc validation failed! Fix documentation errors."
+    exit 1
+}
+
 # Run lint-staged for formatting and linting
 echo "🧹 Running lint-staged..."
 npx lint-staged || {

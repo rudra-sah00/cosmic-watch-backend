@@ -4,7 +4,6 @@ import { EpicController } from './epic.controller';
 
 const router = Router();
 
-// ── EPIC — Earth Polychromatic Imaging Camera ─────────────────
 router.get('/natural', nasaApiLimiter, EpicController.getNatural);
 router.get('/enhanced', nasaApiLimiter, EpicController.getEnhanced);
 router.get('/dates', nasaApiLimiter, EpicController.getAvailableDates);

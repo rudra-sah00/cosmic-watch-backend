@@ -1,6 +1,7 @@
 import axios from 'axios';
-import { env, prisma } from '../../config';
-import { neoLogger } from '../../utils';
+import { CachePrefix, CacheTTL, env, prisma } from '../../config';
+import { cacheKey, getOrSet, neoLogger } from '../../utils';
+import { connectRiskEngineSocket } from '../../websocket';
 import type { EnhancedRiskResult, NeoFeedResponse, NeoObject } from './neo.types';
 
 const NASA_CLIENT = axios.create({
@@ -9,6 +10,7 @@ const NASA_CLIENT = axios.create({
   params: { api_key: env.nasa.apiKey },
 });
 
+/** Axios client for HTTP request/response calls to the Python risk engine. */
 const RISK_ENGINE_CLIENT = axios.create({
   baseURL: env.riskEngine.url,
   timeout: 30000,
@@ -16,38 +18,14 @@ const RISK_ENGINE_CLIENT = axios.create({
 });
 
 /**
- * Wait for the Python risk engine to become healthy.
- * Retries up to `maxRetries` times with exponential backoff.
+ * Connect to the Python risk engine via Socket.IO.
+ * Establishes a persistent WebSocket connection instead of polling `/health`.
  */
-async function waitForRiskEngine(maxRetries = 5, baseDelayMs = 2000): Promise<void> {
-  for (let attempt = 1; attempt <= maxRetries; attempt++) {
-    try {
-      const { data } = await RISK_ENGINE_CLIENT.get('/health', { timeout: 5000 });
-      neoLogger.info(
-        { engine: data.engine, version: data.version },
-        'Python risk engine is healthy'
-      );
-      return;
-    } catch {
-      const delay = baseDelayMs * attempt;
-      neoLogger.warn(
-        { attempt, maxRetries, nextRetryMs: delay },
-        'Python risk engine not ready — retrying'
-      );
-      if (attempt === maxRetries) {
-        neoLogger.error('Python risk engine failed to become healthy after all retries');
-        throw new Error(
-          `Risk engine unreachable at ${env.riskEngine.url} after ${maxRetries} attempts`
-        );
-      }
-      await new Promise((r) => setTimeout(r, delay));
-    }
-  }
+async function connectToRiskEngine(): Promise<void> {
+  await connectRiskEngineSocket();
 }
 
-/**
- * Cache asteroid data from feed response
- */
+/** Cache asteroid objects from a feed response into the Prisma DB (L2 cache). */
 async function cacheAsteroids(feed: NeoFeedResponse): Promise<void> {
   const allAsteroids = Object.values(feed.near_earth_objects).flat();
 
@@ -73,25 +51,24 @@ async function cacheAsteroids(feed: NeoFeedResponse): Promise<void> {
   neoLogger.info({ count: allAsteroids.length }, 'Cached asteroids from feed');
 }
 
+/** Check whether a cached record is still within the allowed age. */
 function isCacheFresh(lastFetched: Date, maxAgeMinutes: number): boolean {
   const ageMs = Date.now() - lastFetched.getTime();
   return ageMs < maxAgeMinutes * 60 * 1000;
 }
 
+/** NEO service — feed, lookup, and Python risk-engine integration. */
 export const NeoService = {
-  /**
-   * Verify the Python risk engine is reachable.
-   * Called once during server bootstrap.
-   */
+  /** Connect to the Python risk engine via Socket.IO (called at bootstrap). */
   async connectRiskEngine(): Promise<void> {
-    await waitForRiskEngine();
+    await connectToRiskEngine();
   },
 
-  /**
-   * Fetch NEO feed from NASA API for a date range
-   */
+  /** Fetch NEO feed from NASA API for a date range. */
   async getFeed(startDate: string, endDate: string): Promise<NeoFeedResponse> {
-    try {
+    const key = cacheKey(CachePrefix.NEO_FEED, { startDate, endDate });
+
+    return getOrSet(key, CacheTTL.NEO_FEED, async () => {
       const { data } = await NASA_CLIENT.get<NeoFeedResponse>('/feed', {
         params: { start_date: startDate, end_date: endDate },
       });
@@ -100,18 +77,15 @@ export const NeoService = {
       cacheAsteroids(data).catch((err) => neoLogger.error({ err }, 'Failed to cache asteroids'));
 
       return data;
-    } catch (error) {
-      neoLogger.error({ err: error }, 'NASA API feed request failed');
-      throw error;
-    }
+    });
   },
 
-  /**
-   * Lookup a specific asteroid by ID
-   */
+  /** Look up a single asteroid — L1 Redis → L2 Prisma DB → L3 NASA API. */
   async lookup(asteroidId: string): Promise<NeoObject> {
-    try {
-      // Check cache first
+    const key = cacheKey(CachePrefix.NEO_LOOKUP, asteroidId);
+
+    return getOrSet(key, CacheTTL.NEO_LOOKUP, async () => {
+      // Check Prisma cache (L2)
       const cached = await prisma.cachedAsteroid.findUnique({
         where: { neoReferenceId: asteroidId },
       });
@@ -123,7 +97,7 @@ export const NeoService = {
 
       const { data } = await NASA_CLIENT.get<NeoObject>(`/neo/${asteroidId}`);
 
-      // Update cache
+      // Update Prisma cache
       await prisma.cachedAsteroid.upsert({
         where: { neoReferenceId: asteroidId },
         create: {
@@ -142,51 +116,52 @@ export const NeoService = {
       });
 
       return data;
-    } catch (error) {
-      neoLogger.error({ err: error, asteroidId }, 'NASA API lookup failed');
-      throw error;
-    }
+    });
   },
 
-  /**
-   * Analyze risk using the Python scientific engine (microservice).
-   */
+  /** Batch risk analysis via the Python scientific engine (cached). */
   async analyzeRiskEnhanced(
     asteroids: NeoObject[],
     dateRange?: { start: string; end: string }
   ): Promise<EnhancedRiskResult> {
-    neoLogger.info({ count: asteroids.length }, 'Sending asteroids to Python risk engine');
+    const ids = asteroids
+      .map((a) => a.neo_reference_id)
+      .sort()
+      .join(',');
+    const key = cacheKey(CachePrefix.RISK, { ids, dateRange });
 
-    const { data } = await RISK_ENGINE_CLIENT.post('/api/v1/analyze', {
-      asteroids,
-      date_range: dateRange,
+    return getOrSet(key, CacheTTL.RISK_ANALYSIS, async () => {
+      neoLogger.info({ count: asteroids.length }, 'Sending asteroids to Python risk engine');
+
+      const { data } = await RISK_ENGINE_CLIENT.post('/api/v1/analyze', {
+        asteroids,
+        date_range: dateRange,
+      });
+
+      neoLogger.info(
+        {
+          analyzed: data.total_analyzed,
+          engine: data.engine,
+          maxRisk: data.statistics?.max_risk_score,
+        },
+        'Python risk engine analysis complete'
+      );
+
+      return data as EnhancedRiskResult;
     });
-
-    neoLogger.info(
-      {
-        analyzed: data.total_analyzed,
-        engine: data.engine,
-        maxRisk: data.statistics?.max_risk_score,
-      },
-      'Python risk engine analysis complete'
-    );
-
-    return data as EnhancedRiskResult;
   },
 
-  /**
-   * Analyze a single asteroid via the Python engine.
-   */
+  /** Single-asteroid risk analysis via the Python engine. */
   async analyzeRiskSingle(asteroid: NeoObject) {
-    const { data } = await RISK_ENGINE_CLIENT.post('/api/v1/analyze/single', asteroid);
-    return data;
+    const key = cacheKey(CachePrefix.RISK, { id: asteroid.neo_reference_id, mode: 'single' });
+
+    return getOrSet(key, CacheTTL.RISK_ANALYSIS, async () => {
+      const { data } = await RISK_ENGINE_CLIENT.post('/api/v1/analyze/single', asteroid);
+      return data;
+    });
   },
 
-  /**
-   * Sentry-enhanced risk analysis.
-   * Fetches real impact data from CNEOS Sentry and passes it to the Python engine
-   * for authoritative risk assessment with real Torino/Palermo values.
-   */
+  /** Sentry-enhanced risk analysis combining NeoWs + CNEOS Sentry data. */
   async analyzeRiskSentryEnhanced(
     asteroid: NeoObject,
     sentryData: {
@@ -204,23 +179,37 @@ export const NeoService = {
       virtualImpactors: unknown[];
     }
   ) {
-    const { data } = await RISK_ENGINE_CLIENT.post('/api/v1/analyze/sentry-enhanced', {
-      asteroid,
-      sentry_data: {
-        designation: sentryData.designation,
-        cumulative_impact_probability: sentryData.cumulativeImpactProbability,
-        palermo_cumulative: sentryData.palermoCumulative,
-        palermo_max: sentryData.palermoMax,
-        torino_max: sentryData.torinoMax,
-        impact_energy_mt: sentryData.impactEnergy,
-        diameter_km: sentryData.diameter,
-        mass_kg: sentryData.mass,
-        velocity_impact: sentryData.velocityImpact,
-        velocity_infinity: sentryData.velocityInfinity,
-        total_virtual_impactors: sentryData.totalVirtualImpactors,
-        virtual_impactors: sentryData.virtualImpactors,
-      },
+    // Include volatile Sentry fields in the cache key so that updated
+    // impact probabilities, Palermo scales, etc. produce a new key.
+    const key = cacheKey(CachePrefix.RISK, {
+      id: asteroid.neo_reference_id,
+      mode: 'sentry',
+      des: sentryData.designation,
+      ip: sentryData.cumulativeImpactProbability,
+      ps: sentryData.palermoCumulative,
+      psMax: sentryData.palermoMax,
+      nVi: sentryData.totalVirtualImpactors,
     });
-    return data;
+
+    return getOrSet(key, CacheTTL.RISK_ANALYSIS, async () => {
+      const { data } = await RISK_ENGINE_CLIENT.post('/api/v1/analyze/sentry-enhanced', {
+        asteroid,
+        sentry_data: {
+          designation: sentryData.designation,
+          cumulative_impact_probability: sentryData.cumulativeImpactProbability,
+          palermo_cumulative: sentryData.palermoCumulative,
+          palermo_max: sentryData.palermoMax,
+          torino_max: sentryData.torinoMax,
+          impact_energy_mt: sentryData.impactEnergy,
+          diameter_km: sentryData.diameter,
+          mass_kg: sentryData.mass,
+          velocity_impact: sentryData.velocityImpact,
+          velocity_infinity: sentryData.velocityInfinity,
+          total_virtual_impactors: sentryData.totalVirtualImpactors,
+          virtual_impactors: sentryData.virtualImpactors,
+        },
+      });
+      return data;
+    });
   },
 };

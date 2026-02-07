@@ -28,6 +28,22 @@ services:
     networks:
       - cosmicwatch-prod-network
 
+  # ── Redis Cache ────────────────────────────────────────────────
+  redis:
+    image: redis:8-alpine
+    container_name: cosmicwatch-redis-prod
+    restart: always
+    volumes:
+      - redis_data_prod:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    command: ["redis-server", "--maxmemory", "256mb", "--maxmemory-policy", "allkeys-lru", "--save", "900", "1"]
+    networks:
+      - cosmicwatch-prod-network
+
   # ── Backend API Server (Production) ────────────────────────────
   backend:
     build:
@@ -48,6 +64,7 @@ services:
       NASA_API_KEY: ${NASA_API_KEY:?NASA_API_KEY is required}
       NASA_API_BASE_URL: https://api.nasa.gov/neo/rest/v1
       RISK_ENGINE_URL: http://risk-engine:8000
+      REDIS_URL: redis://redis:6379
       CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3000}
       API_VERSION: v1
       LOG_LEVEL: ${LOG_LEVEL:-info}
@@ -55,6 +72,8 @@ services:
       RATE_LIMIT_MAX_REQUESTS: 100
     depends_on:
       db:
+        condition: service_healthy
+      redis:
         condition: service_healthy
       risk-engine:
         condition: service_healthy
@@ -83,6 +102,8 @@ services:
 
 volumes:
   postgres_data_prod:
+    driver: local
+  redis_data_prod:
     driver: local
 
 networks:

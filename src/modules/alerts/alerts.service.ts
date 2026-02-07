@@ -1,9 +1,8 @@
 import { prisma } from '../../config';
 
+/** Alert persistence service — CRUD operations for per-user alerts. */
 export const AlertService = {
-  /**
-   * Get user's alerts
-   */
+  /** Retrieve paginated alerts for a user, optionally filtered to unread only. */
   async getUserAlerts(userId: string, page: number, limit: number, unreadOnly = false) {
     const where = {
       userId,
@@ -31,9 +30,7 @@ export const AlertService = {
     };
   },
 
-  /**
-   * Mark alert as read
-   */
+  /** Mark a single alert as read by its ID (scoped to the owning user). */
   async markAsRead(alertId: string, userId: string) {
     return prisma.alert.updateMany({
       where: { id: alertId, userId },
@@ -41,9 +38,7 @@ export const AlertService = {
     });
   },
 
-  /**
-   * Mark all alerts as read
-   */
+  /** Bulk-mark all unread alerts as read for a given user. */
   async markAllAsRead(userId: string) {
     return prisma.alert.updateMany({
       where: { userId, isRead: false },
@@ -51,18 +46,14 @@ export const AlertService = {
     });
   },
 
-  /**
-   * Get unread alert count
-   */
+  /** Return the count of unread alerts for a user. */
   async getUnreadCount(userId: string) {
     return prisma.alert.count({
       where: { userId, isRead: false },
     });
   },
 
-  /**
-   * Create alert for close approach
-   */
+  /** Persist a new close-approach / hazardous / watchlist alert. */
   async createAlert(data: {
     userId: string;
     asteroidId: string;

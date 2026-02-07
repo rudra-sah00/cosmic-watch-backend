@@ -22,7 +22,7 @@ export function initializeSocket(httpServer: HttpServer): Server {
     pingInterval: 25000,
   });
 
-  // ── Authentication Middleware ────────────────────────────────
+  /** Verify JWT token before allowing socket connections. */
   io.use((socket: AuthenticatedSocket, next) => {
     const token =
       socket.handshake.auth.token || socket.handshake.headers.authorization?.split(' ')[1];
@@ -40,12 +40,12 @@ export function initializeSocket(httpServer: HttpServer): Server {
     }
   });
 
-  // ── Connection Handler ──────────────────────────────────────
+  /** Handle new socket connections and register event listeners. */
   io.on('connection', (socket: AuthenticatedSocket) => {
     const user = socket.user!;
     socketLogger.info({ email: user.email, socketId: socket.id }, 'Socket connected');
 
-    // ── Join Room ───────────────────────────────────────────────
+    /** Join a chat room, receive history, and notify other participants. */
     socket.on('join_room', async (roomId: string) => {
       socket.join(roomId);
       socketLogger.info({ email: user.email, roomId }, 'User joined room');
@@ -75,7 +75,7 @@ export function initializeSocket(httpServer: HttpServer): Server {
       });
     });
 
-    // ── Send Message ────────────────────────────────────────────
+    /** Persist a chat message and broadcast it to the room. */
     socket.on('send_message', async (data: { roomId: string; content: string }) => {
       try {
         if (!data.content || data.content.trim().length === 0) return;
@@ -101,7 +101,7 @@ export function initializeSocket(httpServer: HttpServer): Server {
       }
     });
 
-    // ── Leave Room ──────────────────────────────────────────────
+    /** Leave a chat room and notify remaining participants. */
     socket.on('leave_room', (roomId: string) => {
       socket.leave(roomId);
       socket.to(roomId).emit('user_left', {
@@ -112,7 +112,7 @@ export function initializeSocket(httpServer: HttpServer): Server {
       socketLogger.info({ email: user.email, roomId }, 'User left room');
     });
 
-    // ── Typing Indicators ───────────────────────────────────────
+    /** Broadcast typing indicators to the room. */
     socket.on('typing_start', (roomId: string) => {
       socket.to(roomId).emit('user_typing', {
         userId: user.id,
@@ -126,7 +126,7 @@ export function initializeSocket(httpServer: HttpServer): Server {
       });
     });
 
-    // ── Disconnect ──────────────────────────────────────────────
+    /** Log socket disconnection. */
     socket.on('disconnect', (reason) => {
       socketLogger.info({ email: user.email, reason }, 'Socket disconnected');
     });

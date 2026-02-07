@@ -4,7 +4,6 @@ import { NeoController } from './neo.controller';
 
 const router = Router();
 
-// ── NEO Feed & Lookup ─────────────────────────────────────────
 router.get('/feed', nasaApiLimiter, NeoController.getFeed);
 router.get('/lookup/:asteroidId', nasaApiLimiter, NeoController.lookup);
 router.get('/lookup/:asteroidId/risk', nasaApiLimiter, NeoController.lookupRisk);

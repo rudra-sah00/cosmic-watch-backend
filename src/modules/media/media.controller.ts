@@ -2,11 +2,9 @@ import type { NextFunction, Request, Response } from 'express';
 import { ApiResponseHelper } from '../../utils';
 import { MediaService } from './media.service';
 
+/** Handles HTTP requests for the NASA Image & Video Library. */
 export const MediaController = {
-  /**
-   * GET /api/v1/media/search
-   * Query: q, media_type, year_start, year_end, page
-   */
+  /** GET /api/v1/media/search — search NASA media assets by keyword. */
   async search(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { q, media_type, year_start, year_end, page } = req.query as Record<string, string>;
@@ -33,9 +31,7 @@ export const MediaController = {
     }
   },
 
-  /**
-   * GET /api/v1/media/asset/:nasaId
-   */
+  /** GET /api/v1/media/asset/:nasaId — retrieve asset manifest for a media item. */
   async getAsset(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const nasaId = req.params.nasaId as string;

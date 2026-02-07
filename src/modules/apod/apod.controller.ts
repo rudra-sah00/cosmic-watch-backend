@@ -2,11 +2,9 @@ import type { NextFunction, Request, Response } from 'express';
 import { ApiResponseHelper } from '../../utils';
 import { ApodService } from './apod.service';
 
+/** Handles HTTP requests for Astronomy Picture of the Day. */
 export const ApodController = {
-  /**
-   * GET /api/v1/apod/today
-   * Query: date (optional, YYYY-MM-DD)
-   */
+  /** GET /api/v1/apod/today — fetch today's APOD or a specific date. */
   async getToday(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { date } = req.query as Record<string, string>;
@@ -17,10 +15,7 @@ export const ApodController = {
     }
   },
 
-  /**
-   * GET /api/v1/apod/random
-   * Query: count (default 5, max 10)
-   */
+  /** GET /api/v1/apod/random — fetch random APODs (default count 5, max 10). */
   async getRandom(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const count = req.query.count ? parseInt(req.query.count as string, 10) : 5;
@@ -31,10 +26,7 @@ export const ApodController = {
     }
   },
 
-  /**
-   * GET /api/v1/apod/range
-   * Query: start_date, end_date
-   */
+  /** GET /api/v1/apod/range — fetch APODs within a date range. */
   async getRange(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { start_date, end_date } = req.query as Record<string, string>;

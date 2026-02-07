@@ -1,6 +1,6 @@
 import axios from 'axios';
-import { env } from '../../config';
-import { neoLogger } from '../../utils';
+import { CachePrefix, CacheTTL, env } from '../../config';
+import { cacheKey, getOrSet, neoLogger } from '../../utils';
 import type {
   CmeEvent,
   CmeResponse,
@@ -34,7 +34,7 @@ function getDefaultDates(startDate?: string, endDate?: string) {
   return { start, end };
 }
 
-// ── Helpers ─────────────────────────────────────────────────
+/** Maps a Kp index to its NOAA geomagnetic storm level designation. */
 function kpToStormLevel(kp: number): string {
   if (kp >= 9) return 'G5 — Extreme';
   if (kp >= 8) return 'G4 — Severe';
@@ -45,10 +45,12 @@ function kpToStormLevel(kp: number): string {
 }
 
 export const SpaceWeatherService = {
-  // ── Coronal Mass Ejections ──────────────────────────────────
+  /** Fetches Coronal Mass Ejection events from DONKI. */
   async getCme(startDate?: string, endDate?: string): Promise<CmeResponse> {
     const dates = getDefaultDates(startDate, endDate);
-    try {
+    const key = cacheKey(CachePrefix.DONKI_CME, dates);
+
+    return getOrSet(key, CacheTTL.DONKI_CME, async () => {
       const { data } = await DONKI_CLIENT.get<DonkiCmeRaw[]>('/CME', {
         params: { startDate: dates.start, endDate: dates.end },
       });
@@ -79,16 +81,15 @@ export const SpaceWeatherService = {
       donkiLogger.info({ count: events.length }, 'CME events retrieved');
 
       return { totalCount: events.length, dateRange: dates, events };
-    } catch (error) {
-      donkiLogger.error({ err: error }, 'DONKI CME request failed');
-      throw error;
-    }
+    });
   },
 
-  // ── Solar Flares ────────────────────────────────────────────
+  /** Fetches solar flare events from DONKI. */
   async getSolarFlares(startDate?: string, endDate?: string): Promise<SolarFlareResponse> {
     const dates = getDefaultDates(startDate, endDate);
-    try {
+    const key = cacheKey(CachePrefix.DONKI_FLR, dates);
+
+    return getOrSet(key, CacheTTL.DONKI_FLR, async () => {
       const { data } = await DONKI_CLIENT.get<DonkiFlareRaw[]>('/FLR', {
         params: { startDate: dates.start, endDate: dates.end },
       });
@@ -123,19 +124,18 @@ export const SpaceWeatherService = {
       donkiLogger.info({ count: events.length }, 'Solar flare events retrieved');
 
       return { totalCount: events.length, dateRange: dates, events, summary };
-    } catch (error) {
-      donkiLogger.error({ err: error }, 'DONKI solar flare request failed');
-      throw error;
-    }
+    });
   },
 
-  // ── Geomagnetic Storms ──────────────────────────────────────
+  /** Fetches geomagnetic storm events from DONKI. */
   async getGeomagneticStorms(
     startDate?: string,
     endDate?: string
   ): Promise<GeomagneticStormResponse> {
     const dates = getDefaultDates(startDate, endDate);
-    try {
+    const key = cacheKey(CachePrefix.DONKI_GST, dates);
+
+    return getOrSet(key, CacheTTL.DONKI_GST, async () => {
       const { data } = await DONKI_CLIENT.get<DonkiStormRaw[]>('/GST', {
         params: { startDate: dates.start, endDate: dates.end },
       });
@@ -155,20 +155,19 @@ export const SpaceWeatherService = {
       donkiLogger.info({ count: events.length }, 'Geomagnetic storm events retrieved');
 
       return { totalCount: events.length, dateRange: dates, events };
-    } catch (error) {
-      donkiLogger.error({ err: error }, 'DONKI geomagnetic storm request failed');
-      throw error;
-    }
+    });
   },
 
-  // ── Space Weather Notifications ─────────────────────────────
+  /** Fetches space weather notification messages from DONKI. */
   async getNotifications(
     startDate?: string,
     endDate?: string,
     type?: string
   ): Promise<SpaceWeatherNotificationsResponse> {
     const dates = getDefaultDates(startDate, endDate);
-    try {
+    const key = cacheKey(CachePrefix.DONKI_NOTIFICATIONS, { ...dates, type });
+
+    return getOrSet(key, CacheTTL.DONKI_NOTIFICATIONS, async () => {
       const params: Record<string, unknown> = {
         startDate: dates.start,
         endDate: dates.end,
@@ -190,9 +189,6 @@ export const SpaceWeatherService = {
       donkiLogger.info({ count: notifications.length }, 'Space weather notifications retrieved');
 
       return { totalCount: notifications.length, dateRange: dates, notifications };
-    } catch (error) {
-      donkiLogger.error({ err: error }, 'DONKI notifications request failed');
-      throw error;
-    }
+    });
   },
 };

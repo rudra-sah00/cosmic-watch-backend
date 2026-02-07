@@ -4,6 +4,7 @@ import { env } from '../config';
 import type { AuthenticatedRequest, UserPayload, UserRole } from '../modules/auth/auth.types';
 import { ForbiddenError, UnauthorizedError } from '../utils/errors';
 
+/** Extract and verify JWT from the Authorization header, attaching the decoded user to `req.user`. */
 export const authenticate = (
   req: AuthenticatedRequest,
   _res: Response,
@@ -29,6 +30,7 @@ export const authenticate = (
   }
 };
 
+/** Restrict access to users whose role is in the allowed list. */
 export const authorize = (...roles: UserRole[]) => {
   return (req: AuthenticatedRequest, _res: Response, next: NextFunction): void => {
     if (!req.user) {

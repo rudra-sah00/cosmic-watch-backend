@@ -29,13 +29,21 @@ interface EnvironmentConfig {
   riskEngine: {
     url: string;
   };
+  redis: {
+    url: string;
+  };
   rateLimit: {
     windowMs: number;
     maxRequests: number;
+    authWindowMs: number;
+    authMaxRequests: number;
+    nasaWindowMs: number;
+    nasaMaxRequests: number;
   };
   logLevel: string;
 }
 
+/** Read a required string environment variable, falling back to `fallback` if provided. */
 const getEnvVar = (key: string, fallback?: string): string => {
   const value = process.env[key] ?? fallback;
   if (value === undefined) {
@@ -44,6 +52,7 @@ const getEnvVar = (key: string, fallback?: string): string => {
   return value;
 };
 
+/** Read an environment variable as a number, falling back to `fallback` if the var is unset. */
 const getEnvNumber = (key: string, fallback?: number): number => {
   const value = process.env[key];
   if (value === undefined && fallback !== undefined) return fallback;
@@ -54,6 +63,7 @@ const getEnvNumber = (key: string, fallback?: number): number => {
   return parsed;
 };
 
+/** Validated and typed environment configuration object. */
 export const env: EnvironmentConfig = {
   node_env: getEnvVar('NODE_ENV', 'development'),
   port: getEnvNumber('PORT', 4000),
@@ -80,9 +90,16 @@ export const env: EnvironmentConfig = {
   riskEngine: {
     url: getEnvVar('RISK_ENGINE_URL', 'http://localhost:8000'),
   },
+  redis: {
+    url: getEnvVar('REDIS_URL', 'redis://localhost:6379'),
+  },
   rateLimit: {
     windowMs: getEnvNumber('RATE_LIMIT_WINDOW_MS', 900000),
     maxRequests: getEnvNumber('RATE_LIMIT_MAX_REQUESTS', 100),
+    authWindowMs: getEnvNumber('RATE_LIMIT_AUTH_WINDOW_MS', 900000),
+    authMaxRequests: getEnvNumber('RATE_LIMIT_AUTH_MAX_REQUESTS', 10),
+    nasaWindowMs: getEnvNumber('RATE_LIMIT_NASA_WINDOW_MS', 60000),
+    nasaMaxRequests: getEnvNumber('RATE_LIMIT_NASA_MAX_REQUESTS', 30),
   },
   logLevel: getEnvVar('LOG_LEVEL', 'debug'),
 };

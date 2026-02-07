@@ -1,7 +1,9 @@
-// ═══════════════════════════════════════════════════════════════
-//  APOD API Types — Astronomy Picture of the Day
-// ═══════════════════════════════════════════════════════════════
+/**
+ * APOD API types for Astronomy Picture of the Day.
+ * @module apod/types
+ */
 
+/** Raw APOD response from the NASA API. */
 export interface ApodRaw {
   copyright?: string;
   date: string;

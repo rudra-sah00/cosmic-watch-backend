@@ -1,7 +1,9 @@
-// ═══════════════════════════════════════════════════════════════
-//  EPIC API Types — Earth Polychromatic Imaging Camera
-// ═══════════════════════════════════════════════════════════════
+/**
+ * EPIC API types for Earth Polychromatic Imaging Camera data.
+ * @module epic/types
+ */
 
+/** Raw image record from the EPIC API. */
 export interface EpicImageRaw {
   identifier: string;
   caption: string;

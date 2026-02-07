@@ -11,7 +11,10 @@ from contextlib import asynccontextmanager
 import logging
 import time
 
+import socketio
+
 from app.routes import risk_router, health_router
+from app.services import sio
 from app.config import settings
 
 
@@ -45,3 +48,6 @@ app.add_middleware(
 
 app.include_router(health_router)
 app.include_router(risk_router, prefix="/api/v1")
+
+# Wrap ASGI app with Socket.IO for real-time backend connection
+combined_asgi_app = socketio.ASGIApp(sio, app)

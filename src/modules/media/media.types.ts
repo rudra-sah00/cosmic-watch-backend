@@ -1,7 +1,9 @@
-// ═══════════════════════════════════════════════════════════════
-//  NASA Image & Video Library Types
-// ═══════════════════════════════════════════════════════════════
+/**
+ * NASA Image and Video Library API types.
+ * @module media/types
+ */
 
+/** Raw search response from the NASA media API. */
 export interface NasaMediaSearchRaw {
   collection: {
     version: string;

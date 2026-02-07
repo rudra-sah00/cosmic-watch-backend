@@ -1,8 +1,9 @@
-// ═══════════════════════════════════════════════════════════════
-//  DONKI API Types — Space Weather Events
-// ═══════════════════════════════════════════════════════════════
+/**
+ * DONKI API types for space weather events.
+ * @module space-weather/types
+ */
 
-// ── Coronal Mass Ejection (CME) ───────────────────────────────
+/** Raw CME event from the DONKI API. */
 export interface DonkiCmeRaw {
   activityID: string;
   catalog: string;
@@ -76,7 +77,7 @@ export interface CmeResponse {
   events: CmeEvent[];
 }
 
-// ── Solar Flare ───────────────────────────────────────────────
+/** Raw solar flare event from the DONKI API. */
 export interface DonkiFlareRaw {
   flrID: string;
   instruments: { displayName: string }[];
@@ -117,7 +118,7 @@ export interface SolarFlareResponse {
   };
 }
 
-// ── Geomagnetic Storm ─────────────────────────────────────────
+/** Raw geomagnetic storm event from the DONKI API. */
 export interface DonkiStormRaw {
   gstID: string;
   startTime: string;
@@ -148,7 +149,7 @@ export interface GeomagneticStormResponse {
   events: GeomagneticStorm[];
 }
 
-// ── DONKI Notifications ──────────────────────────────────────
+/** Raw DONKI notification message. */
 export interface DonkiNotificationRaw {
   messageType: string;
   messageID: string;

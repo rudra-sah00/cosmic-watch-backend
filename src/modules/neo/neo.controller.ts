@@ -3,11 +3,9 @@ import { ApiResponseHelper } from '../../utils';
 import { CneosService } from '../cneos/cneos.service';
 import { NeoService } from './neo.service';
 
+/** Handles HTTP requests for Near-Earth Object tracking and risk analysis. */
 export const NeoController = {
-  /**
-   * GET /api/v1/neo/feed
-   * Query: start_date, end_date (YYYY-MM-DD)
-   */
+  /** GET /api/v1/neo/feed — NEO feed grouped by close-approach date. */
   async getFeed(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { start_date, end_date } = req.query as { start_date: string; end_date: string };
@@ -24,9 +22,7 @@ export const NeoController = {
     }
   },
 
-  /**
-   * GET /api/v1/neo/lookup/:asteroidId
-   */
+  /** GET /api/v1/neo/lookup/:asteroidId — full detail for a single asteroid. */
   async lookup(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const asteroidId = req.params.asteroidId as string;
@@ -37,11 +33,7 @@ export const NeoController = {
     }
   },
 
-  /**
-   * GET /api/v1/neo/risk
-   * Enhanced risk analysis powered by Python scientific engine
-   * Query: start_date, end_date (YYYY-MM-DD)
-   */
+  /** GET /api/v1/neo/risk — batch risk analysis via Python scientific engine. */
   async getRiskAnalysis(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { start_date, end_date } = req.query as { start_date: string; end_date: string };
@@ -63,10 +55,7 @@ export const NeoController = {
     }
   },
 
-  /**
-   * GET /api/v1/neo/lookup/:asteroidId/risk
-   * Single asteroid risk analysis via Python engine
-   */
+  /** GET /api/v1/neo/lookup/:asteroidId/risk — single-asteroid risk analysis. */
   async lookupRisk(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const asteroidId = req.params.asteroidId as string;
@@ -79,11 +68,7 @@ export const NeoController = {
     }
   },
 
-  /**
-   * GET /api/v1/neo/lookup/:asteroidId/sentry-risk
-   * Enhanced risk analysis using real CNEOS Sentry impact monitoring data.
-   * Combines NASA NeoWs + CNEOS Sentry for authoritative assessment.
-   */
+  /** GET /api/v1/neo/lookup/:asteroidId/sentry-risk — Sentry-enhanced risk assessment. */
   async lookupSentryRisk(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const asteroidId = req.params.asteroidId as string;

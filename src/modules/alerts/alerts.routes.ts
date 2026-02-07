@@ -4,7 +4,6 @@ import { AlertController } from './alerts.controller';
 
 const router = Router();
 
-// All alert routes require authentication
 router.use(authenticate);
 
 router.get('/', AlertController.getAlerts);

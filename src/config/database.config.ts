@@ -4,7 +4,6 @@ import { Pool } from 'pg';
 import { dbLogger } from '../utils/logger';
 import { env, isDev } from './env.config';
 
-// ── PostgreSQL Connection Pool ────────────────────────────────
 const pool = new Pool({
   connectionString: env.database.url,
   max: 20,
@@ -12,7 +11,6 @@ const pool = new Pool({
   connectionTimeoutMillis: 5000,
 });
 
-// ── Prisma v7 Driver Adapter ──────────────────────────────────
 const adapter = new PrismaPg(pool);
 
 const globalForPrisma = globalThis as unknown as {
@@ -20,14 +18,18 @@ const globalForPrisma = globalThis as unknown as {
 };
 
 export const prisma =
+  /* v8 ignore next */
   globalForPrisma.prisma ??
   new PrismaClient({
     adapter,
+    /* v8 ignore next */
     log: isDev ? ['query', 'info', 'warn', 'error'] : ['error'],
   });
 
+/* v8 ignore next */
 if (isDev) globalForPrisma.prisma = prisma;
 
+/** Connect to PostgreSQL via Prisma. Exits the process on failure. */
 export async function connectDatabase(): Promise<void> {
   try {
     await prisma.$connect();
@@ -38,6 +40,7 @@ export async function connectDatabase(): Promise<void> {
   }
 }
 
+/** Disconnect Prisma and close the pg connection pool. */
 export async function disconnectDatabase(): Promise<void> {
   await prisma.$disconnect();
   await pool.end();

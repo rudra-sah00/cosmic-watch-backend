@@ -3,19 +3,19 @@ import { StatusCodes } from 'http-status-codes';
 import { AppError } from '../utils/errors';
 import { logger } from '../utils/logger';
 
+/** Global Express error handler — normalises all errors into a JSON envelope. */
 export const errorHandler = (
   err: Error,
   _req: Request,
   res: Response,
   _next: NextFunction
 ): void => {
-  // Log error with full stack trace (stays in server logs only)
+  /** Log error with full stack trace (stays in server logs only). */
   logger.error(
     { err, ...(err instanceof AppError && { statusCode: err.statusCode }) },
     err.message
   );
 
-  // Handle known operational errors
   if (err instanceof AppError) {
     res.status(err.statusCode).json({
       success: false,
@@ -24,7 +24,6 @@ export const errorHandler = (
     return;
   }
 
-  // Handle Prisma errors
   if (err.name === 'PrismaClientKnownRequestError') {
     res.status(StatusCodes.BAD_REQUEST).json({
       success: false,
@@ -33,7 +32,6 @@ export const errorHandler = (
     return;
   }
 
-  // Handle Zod validation errors
   if (err.name === 'ZodError') {
     res.status(StatusCodes.BAD_REQUEST).json({
       success: false,
@@ -42,7 +40,6 @@ export const errorHandler = (
     return;
   }
 
-  // Unknown errors — never leak internals to clients
   res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
     success: false,
     message: 'Internal server error',

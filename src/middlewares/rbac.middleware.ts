@@ -2,10 +2,6 @@ import type { NextFunction, Response } from 'express';
 import { type AuthenticatedRequest, UserRole } from '../modules/auth/auth.types';
 import { ForbiddenError, UnauthorizedError } from '../utils/errors';
 
-// ═══════════════════════════════════════════════════════════════
-//  RBAC (Role-Based Access Control) Configuration
-// ═══════════════════════════════════════════════════════════════
-
 type Action = 'create' | 'read' | 'update' | 'delete' | 'manage';
 type Resource =
   | 'users'
@@ -46,6 +42,7 @@ const PERMISSIONS: PermissionMatrix = {
   },
 };
 
+/** Check whether a role has the given action on a resource. */
 export function hasPermission(role: UserRole, resource: Resource, action: Action): boolean {
   const rolePermissions = PERMISSIONS[role];
   if (!rolePermissions) return false;
@@ -54,6 +51,7 @@ export function hasPermission(role: UserRole, resource: Resource, action: Action
   return resourceActions.includes(action) || resourceActions.includes('manage');
 }
 
+/** Middleware that checks the authenticated user has a specific permission. */
 export const requirePermission = (resource: Resource, action: Action) => {
   return (req: AuthenticatedRequest, _res: Response, next: NextFunction): void => {
     if (!req.user) {
@@ -74,6 +72,7 @@ export const requirePermission = (resource: Resource, action: Action) => {
   };
 };
 
+/** Middleware that restricts access to specific roles. */
 export const requireRole = (...roles: UserRole[]) => {
   return (req: AuthenticatedRequest, _res: Response, next: NextFunction): void => {
     if (!req.user) {
@@ -90,6 +89,7 @@ export const requireRole = (...roles: UserRole[]) => {
   };
 };
 
+/** Middleware that ensures the user owns the resource (admins bypass). */
 export const requireOwnership = (paramName: string = 'userId') => {
   return (req: AuthenticatedRequest, _res: Response, next: NextFunction): void => {
     if (!req.user) {

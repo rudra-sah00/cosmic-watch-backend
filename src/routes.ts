@@ -11,7 +11,7 @@ import watchlistRoutes from './modules/watchlist/watchlist.routes';
 
 const router = Router();
 
-// ── Health Check ──────────────────────────────────────────────
+/** Health check endpoint returning uptime and status. */
 router.get('/health', (_req: Request, res: Response) => {
   res.json({
     success: true,
@@ -21,7 +21,6 @@ router.get('/health', (_req: Request, res: Response) => {
   });
 });
 
-// ── Mount Module Routes ───────────────────────────────────────
 router.use('/auth', authRoutes);
 router.use('/neo', neoRoutes);
 router.use('/watchlist', watchlistRoutes);
