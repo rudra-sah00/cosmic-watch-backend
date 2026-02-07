@@ -23,7 +23,7 @@ export const prisma =
   new PrismaClient({
     adapter,
     /* v8 ignore next */
-    log: isDev ? ['query', 'info', 'warn', 'error'] : ['error'],
+    log: isDev ? ['info', 'warn', 'error'] : ['error'],
   });
 
 /* v8 ignore next */
