@@ -1,0 +1,78 @@
+# ═══════════════════════════════════════════════════════════════
+#  COSMIC WATCH — Production Multi-Stage Dockerfile (Node.js)
+#  Optimized for size, security, and performance
+# ═══════════════════════════════════════════════════════════════
+
+# ── Stage 1: Install Dependencies ─────────────────────────────
+FROM node:22-slim AS deps
+
+WORKDIR /app
+
+RUN corepack enable && corepack prepare pnpm@latest --activate
+
+COPY package.json pnpm-lock.yaml* ./
+
+# Install production deps separately for the final image
+RUN pnpm install --prod --frozen-lockfile && \
+    cp -R node_modules /prod_modules
+
+# Install all deps (for build step)
+RUN pnpm install --frozen-lockfile
+
+# ── Stage 2: Build ─────────────────────────────────────────────
+FROM node:22-slim AS builder
+
+WORKDIR /app
+
+RUN corepack enable && corepack prepare pnpm@latest --activate
+
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+
+# Generate Prisma client and compile TypeScript
+RUN pnpm exec prisma generate && pnpm build
+
+# ── Stage 3: Production Runner ────────────────────────────────
+FROM node:22-slim AS runner
+
+LABEL maintainer="Cosmic Watch Team"
+LABEL description="Production-optimized image"
+
+WORKDIR /app
+
+# Install curl for health checks + openssl for Prisma
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl openssl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Security: create non-root user
+RUN groupadd --system --gid 1001 cosmicwatch && \
+    useradd --system --uid 1001 --gid cosmicwatch cosmicwatch
+
+# Copy production-only dependencies
+COPY --from=deps /prod_modules ./node_modules
+
+# Copy compiled output
+COPY --from=builder /app/dist ./dist
+
+# Copy Prisma schema + generated client for runtime migrations
+COPY --from=builder /app/prisma ./prisma
+COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
+
+# Copy package.json for metadata
+COPY package.json ./
+
+# Set ownership
+RUN chown -R cosmicwatch:cosmicwatch /app
+
+USER cosmicwatch
+
+ENV NODE_ENV=production
+
+EXPOSE 4000
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
+  CMD curl -f http://localhost:4000/api/v1/health || exit 1
+
+CMD ["node", "dist/server.js"]

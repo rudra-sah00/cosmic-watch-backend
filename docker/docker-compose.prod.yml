@@ -1,0 +1,90 @@
+# ═══════════════════════════════════════════════════════════════
+#  COSMIC WATCH — Docker Compose (Production)
+#  Optimized, secure, no volume mounts
+# ═══════════════════════════════════════════════════════════════
+
+name: cosmicwatch-prod
+
+services:
+  # ── PostgreSQL Database ────────────────────────────────────────
+  db:
+    image: postgres:18-alpine
+    container_name: cosmicwatch-db-prod
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-cosmicwatch}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-cosmicwatch_secret}
+      POSTGRES_DB: ${POSTGRES_DB:-cosmicwatch_db}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data_prod:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cosmicwatch -d cosmicwatch_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - cosmicwatch-prod-network
+
+  # ── Backend API Server (Production) ────────────────────────────
+  backend:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.prod
+    container_name: cosmicwatch-backend-prod
+    restart: always
+    ports:
+      - "4000:4000"
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+      DATABASE_URL: postgresql://${POSTGRES_USER:-cosmicwatch}:${POSTGRES_PASSWORD:-cosmicwatch_secret}@db:5432/${POSTGRES_DB:-cosmicwatch_db}?schema=public
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:?JWT_REFRESH_SECRET is required}
+      JWT_REFRESH_EXPIRES_IN: ${JWT_REFRESH_EXPIRES_IN:-30d}
+      NASA_API_KEY: ${NASA_API_KEY:?NASA_API_KEY is required}
+      NASA_API_BASE_URL: https://api.nasa.gov/neo/rest/v1
+      RISK_ENGINE_URL: http://risk-engine:8000
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3000}
+      API_VERSION: v1
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      RATE_LIMIT_WINDOW_MS: 900000
+      RATE_LIMIT_MAX_REQUESTS: 100
+    depends_on:
+      db:
+        condition: service_healthy
+      risk-engine:
+        condition: service_healthy
+    networks:
+      - cosmicwatch-prod-network
+
+  # ── Python Risk Analysis Engine ──────────────────────────────
+  risk-engine:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.risk-engine
+    container_name: cosmicwatch-risk-engine-prod
+    restart: always
+    environment:
+      RISK_ENGINE_PORT: 8000
+      RISK_ENGINE_HOST: 0.0.0.0
+      LOG_LEVEL: warning
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 15s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
+    networks:
+      - cosmicwatch-prod-network
+
+volumes:
+  postgres_data_prod:
+    driver: local
+
+networks:
+  cosmicwatch-prod-network:
+    driver: bridge
