@@ -10,7 +10,7 @@ flowchart LR
         C["Client"]
     end
 
-    subgraph Express["Express API — :4000"]
+    subgraph Express["Express API — :4001"]
         CME["GET /space-weather/cme"]
         FLR["GET /space-weather/flares"]
         STM["GET /space-weather/storms"]

@@ -10,7 +10,7 @@ flowchart TB
         C[Client Request]
     end
 
-    subgraph Express["Express API — :4000"]
+    subgraph Express["Express API — :4001"]
         FEED["GET /neo/feed"]
         LOOK["GET /neo/lookup/:id"]
         RISK["GET /neo/risk"]
@@ -27,7 +27,7 @@ flowchart TB
         SAPI["ssd-api.jpl.nasa.gov/sentry.api"]
     end
 
-    subgraph Python["Python Risk Engine — :8000"]
+    subgraph Python["Python Risk Engine — :8001"]
         BATCH["POST /analyze"]
         SINGLE["POST /analyze/single"]
         SENRY["POST /analyze/sentry-enhanced"]
@@ -386,7 +386,7 @@ Risk analysis is powered by a **Python FastAPI microservice** using NumPy, SciPy
 
 ```mermaid
 flowchart LR
-    A["Express API<br/>:4000"] -- "POST /analyze" --> B["FastAPI<br/>:8000"]
+    A["Express API<br/>:4001"] -- "POST /analyze" --> B["FastAPI<br/>:8001"]
     A -- "POST /analyze/single" --> B
     A -- "POST /analyze/sentry-enhanced" --> B
 

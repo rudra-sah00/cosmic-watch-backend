@@ -6,7 +6,7 @@
 
 ```mermaid
 flowchart TB
-    GW["Express 5 Gateway — :4000"]
+    GW["Express 5 Gateway — :4001"]
 
     GW --> HEALTH["Health ×1"]
 
@@ -41,7 +41,7 @@ flowchart TB
 ## Base URL
 
 ```
-http://localhost:4000/api/v1
+http://localhost:4001/api/v1
 ```
 
 ---

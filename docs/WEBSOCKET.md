@@ -65,7 +65,7 @@ flowchart LR
 
 ## Connection
 
-**URL:** `http://localhost:4000`  
+**URL:** `http://localhost:4001`  
 **Transport:** WebSocket (with polling fallback)  
 **Protocol:** Socket.io v4
 
@@ -76,14 +76,14 @@ Connections require a valid JWT access token in the handshake:
 ```javascript
 import { io } from 'socket.io-client';
 
-const socket = io('http://localhost:4000', {
+const socket = io('http://localhost:4001', {
   auth: {
     token: '<JWT_ACCESS_TOKEN>'
   }
 });
 
 // Or via headers
-const socket = io('http://localhost:4000', {
+const socket = io('http://localhost:4001', {
   extraHeaders: {
     authorization: 'Bearer <JWT_ACCESS_TOKEN>'
   }

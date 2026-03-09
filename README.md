@@ -24,7 +24,7 @@ graph TB
         PM["Postman / cURL"]
     end
 
-    subgraph Gateway["Express 5 API Gateway — :4000"]
+    subgraph Gateway["Express 5 API Gateway — :4001"]
         direction LR
         AUTH["Auth"]
         NEO["NEO"]
@@ -46,7 +46,7 @@ graph TB
         Cache[(CachedAsteroids)]
     end
 
-    subgraph RE["Python Risk Engine — FastAPI :8000"]
+    subgraph RE["Python Risk Engine — FastAPI :8001"]
         ASTRO["astropy 7 + NumPy"]
         MOID["MOID Impact Probability"]
         SCALES["Torino & Palermo Scales"]
@@ -184,7 +184,7 @@ cd risk-engine
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
-uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+uvicorn app.main:app --host 0.0.0.0 --port 8001 --reload
 ```
 
 ### 5. Start Development Server
@@ -194,7 +194,7 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 pnpm dev
 ```
 
-Server starts at `http://localhost:4000` with hot-reload via `tsx watch`.
+Server starts at `http://localhost:4001` with hot-reload via `tsx watch`.
 
 ---
 
@@ -232,15 +232,15 @@ pnpm docker:prod:down
 
 | Service | Image | Port | Description |
 |---------|-------|------|-------------|
-| `db` | `postgres:18-alpine` | 5432 | PostgreSQL database |
-| `risk-engine` | `python:3.12-slim` | 8000 | Scientific risk analysis |
-| `backend` | `node:22-slim` | 4000 | Express API gateway |
+| `db` | `postgres:18-alpine` | 5433 | PostgreSQL database |
+| `risk-engine` | `python:3.12-slim` | 8001 | Scientific risk analysis |
+| `backend` | `node:22-slim` | 4001 | Express API gateway |
 
 ```mermaid
 graph LR
     subgraph Docker Compose
-        BE["backend<br/>node:22-slim<br/>:4000"] -- depends_on --> DB["db<br/>postgres:18-alpine<br/>:5432"]
-        BE -- depends_on --> RE["risk-engine<br/>python:3.12-slim<br/>:8000"]
+        BE["backend<br/>node:22-slim<br/>:4001"] -- depends_on --> DB["db<br/>postgres:18-alpine<br/>:5433"]
+        BE -- depends_on --> RE["risk-engine<br/>python:3.12-slim<br/>:8001"]
     end
 
     BE -- ":9229" --> DBG["Debug Port"]

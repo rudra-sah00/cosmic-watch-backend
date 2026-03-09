@@ -4,13 +4,13 @@
 
 ## Overview
 
-The risk engine is a standalone **Python FastAPI** microservice that receives asteroid data from the Node.js backend and returns comprehensive risk assessments. It runs on **port 8000** and communicates via HTTP/JSON.
+The risk engine is a standalone **Python FastAPI** microservice that receives asteroid data from the Node.js backend and returns comprehensive risk assessments. It runs on **port 8001** and communicates via HTTP/JSON.
 
 ## Architecture
 
 ```mermaid
 flowchart TB
-    subgraph Node["Node.js Backend — :4000"]
+    subgraph Node["Node.js Backend — :4001"]
         R1["POST /api/v1/analyze"]
         R2["POST /api/v1/analyze/single"]
         R3["POST /api/v1/analyze/sentry-enhanced"]
@@ -18,7 +18,7 @@ flowchart TB
 
     R1 & R2 & R3 -- "HTTP" --> MAIN
 
-    subgraph Python["Python FastAPI — :8000"]
+    subgraph Python["Python FastAPI — :8001"]
         MAIN["routes/risk.py"] --> ENGINE["RiskEngine facade"]
 
         ENGINE --> ASSESS["assessment.py<br/>Orchestrator"]
@@ -369,13 +369,13 @@ cd risk-engine
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
-uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+uvicorn app.main:app --host 0.0.0.0 --port 8001 --reload
 ```
 
 ### Health Check
 
 ```
-GET http://localhost:8000/health
+GET http://localhost:8001/health
 ```
 
 ```json
@@ -396,9 +396,9 @@ risk-engine:
     context: .
     dockerfile: docker/Dockerfile.risk-engine
   ports:
-    - "8000:8000"
+    - "8001:8000"
   healthcheck:
-    test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+    test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
     interval: 30s
 ```
 

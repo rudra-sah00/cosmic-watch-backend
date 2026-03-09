@@ -17,7 +17,7 @@ services:
       POSTGRES_PASSWORD: cosmicwatch_secret
       POSTGRES_DB: cosmicwatch_db
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - postgres_data_dev:/var/lib/postgresql/data
     healthcheck:
@@ -34,7 +34,7 @@ services:
     container_name: cosmicwatch-redis-dev
     restart: unless-stopped
     ports:
-      - "6379:6379"
+      - "6380:6379"
     volumes:
       - redis_data_dev:/data
     healthcheck:
@@ -54,7 +54,7 @@ services:
     container_name: cosmicwatch-risk-engine-dev
     restart: unless-stopped
     ports:
-      - "8000:8000"
+      - "8001:8000"
     environment:
       RISK_ENGINE_PORT: 8000
       RISK_ENGINE_HOST: 0.0.0.0
@@ -79,7 +79,7 @@ services:
     container_name: cosmicwatch-backend-dev
     restart: unless-stopped
     ports:
-      - "${PORT:-4000}:${PORT:-4000}"
+      - "${PORT:-4001}:${PORT:-4001}"
       - "9229:9229"   # Node.js debug port
     env_file:
       - ../.env
